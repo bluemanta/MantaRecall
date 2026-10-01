@@ -56,9 +56,10 @@ class CrossEncoderRerank:
     CPU 推理在 executor 里跑，不阻塞事件循环。
     """
 
-    def __init__(self, model_name: str, top_n: int = 50):
+    def __init__(self, model_name: str, top_n: int = 50, threads: int = 1):
         self.model_name = model_name
         self.top_n = max(1, int(top_n))
+        self.threads = max(1, int(threads))
         self._model = None
         self._lock = threading.Lock()
         self._lat_ms: deque[float] = deque(maxlen=1024)
@@ -82,6 +83,12 @@ class CrossEncoderRerank:
 
             src = self._model_dir or self.model_name
             log.info("loading cross-encoder reranker: %s", src)
+            # 高并发关键：每个 query 的推理线程数设小，避免 N 个并发 query 的
+            # 线程池互抢 CPU 反而拖慢 p95。torch.set_num_threads 是进程级设置。
+            import torch
+
+            torch.set_num_threads(self.threads)
+            torch.set_num_interop_threads(1)
             # trust_remote_code=False：只用标准 transformer 结构
             self._model = CrossEncoder(src, trust_remote_code=False)
             log.info("cross-encoder reranker ready: %s", src)
@@ -124,6 +131,7 @@ class CrossEncoderRerank:
             "enabled": True,
             "model": self.model_name,
             "top_n": self.top_n,
+            "threads": self.threads,
             "calls": self._calls,
             "p50_ms": pct(0.50),
             "p95_ms": pct(0.95),

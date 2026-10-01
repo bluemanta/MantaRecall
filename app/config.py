@@ -29,6 +29,7 @@ class Settings(BaseSettings):
 
     reranker_model: str = "none"                   # none=关闭；否则为 cross-encoder 模型名或本地路径
     rerank_top_n: int = 50                         # RRF 融合后取前 N 候选做 cross-encoder 精排
+    rerank_threads: int = 1                        # cross-encoder 推理线程数；高并发下设 1 避免抢核拖慢 p95
 
     config_path: str = "./config.yaml"
     log_level: str = "info"
@@ -115,7 +116,9 @@ def build_app_state(settings: Settings):
     reranker_model = (settings.reranker_model or "none").strip()
     if reranker_model.lower() != "none":
         rerank = CrossEncoderRerank(
-            model_name=reranker_model, top_n=settings.rerank_top_n
+            model_name=reranker_model,
+            top_n=settings.rerank_top_n,
+            threads=settings.rerank_threads,
         )
 
     return {

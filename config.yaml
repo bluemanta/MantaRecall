@@ -1,0 +1,36 @@
+# ============================================================
+# AML 文本赛道 · 学术榜 — 检索策略 / 冲突消解 / 抽取策略配置
+# 所有策略都是可替换的扩展点（见 app/pipeline/），这里只选型。
+# ============================================================
+
+extraction:
+  enabled: false            # false=原文直存（零 LLM 成本，适合 Smoke/联调）
+                            # true =Add 时用 gpt-4o-mini 抽事实/事件/偏好（正式评测建议 true，成本见 README）
+  strategy: llm_extract     # llm_extract | passthrough
+  batch_messages: 10        # 每次 LLM 调用打包的消息条数
+  max_tokens: 2000
+
+conflict:
+  strategy: llm_judge       # llm_judge | none
+                            # llm_judge：新事实与库内相似事实做去重/更新/矛盾裁决（记忆治理 D 项）
+                            # none：全部直接入库（最快最便宜，但更新/矛盾不处理）
+  candidate_k: 5            # 每条新事实召回多少候选做裁决
+  min_similarity: 0.75      # 低于此余弦相似度不送 LLM 裁决
+
+retrieval:
+  strategy: hybrid_rrf      # hybrid_rrf | dense | lexical（三选一，先跑 hybrid_rrf）
+  dense_k: 200              # 稠密召回候选数
+  lexical_k: 200            # 词法召回候选数（Postgres tsvector + ts_rank）
+  rrf_k: 60                 # RRF 融合参数（经典值 60）
+  seed_k: 100               # 融合后取前 N 进入 rerank（正式评测 Search top_k=100，seed_k 建议 >= top_k）
+  context_window: 0         # 同会话上下文扩展：对每个种子补充前后各 N 条消息（0=关闭；>0 会改变语义，建议先 0）
+
+rerank:
+  strategy: none            # none | cross_encoder | llm_judge
+                            # none：直接用融合排序（默认，最快）
+                            # cross_encoder：本地 cross-encoder 精排（需自行实现，见 app/pipeline/rerank.py）
+                            # llm_judge：用 gpt-4o-mini 做 judge 精排（学术榜允许，reranker 不限；成本高）
+
+server:
+  add_llm_concurrency: 16   # Add 流程内 LLM 并发上限（保护配额）
+  db_pool_max: 50           # asyncpg 连接池上限（扛 Add 64 / Search 256 并发）

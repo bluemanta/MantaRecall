@@ -1,0 +1,19 @@
+# secrets — 永远不要提交
+.env
+*.env
+deploy/aml_deploy_key
+deploy/aml_deploy_key.pub
+deploy/MEMORY_API_KEY.txt
+deploy/NOTES.md
+*.pem
+*.key
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# local
+.DS_Store
+.venv/

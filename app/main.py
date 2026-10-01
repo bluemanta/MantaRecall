@@ -54,8 +54,11 @@ async def lifespan(app: FastAPI):
     app.state.retrieval = state["retrieval"]
     app.state.rerank = state["rerank"]
     await check_embedding_identity(pool, state["embedder"].identity)
-    log.info("ready: embedder=%s llm=%s",
-             state["embedder"].identity, getattr(state["llm"], "model", "none"))
+    # reranker 预热（none 时是 no-op；cross-encoder 时加载模型+torch，避免首 query 冷启动）
+    await state["rerank"].awarmup()
+    log.info("ready: embedder=%s llm=%s rerank=%s",
+             state["embedder"].identity, getattr(state["llm"], "model", "none"),
+             state["rerank"].stats())
     yield
     await state["embedder"].aclose()
     await state["llm"].aclose()
@@ -78,7 +81,12 @@ async def health(request: Request):
             await conn.fetchval("SELECT 1")
     except Exception as e:
         return JSONResponse(status_code=503, content={"status": "unhealthy", "detail": str(e)[:200]})
-    return {"status": "ok"}
+    out = {"status": "ok"}
+    try:
+        out["rerank"] = request.app.state.rerank.stats()
+    except Exception:
+        pass
+    return out
 
 
 async def _fetch_conflict_candidates(

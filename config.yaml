@@ -26,10 +26,11 @@ retrieval:
   context_window: 0         # 同会话上下文扩展：对每个种子补充前后各 N 条消息（0=关闭；>0 会改变语义，建议先 0）
 
 rerank:
-  strategy: none            # none | cross_encoder | llm_judge
-                            # none：直接用融合排序（默认，最快）
-                            # cross_encoder：本地 cross-encoder 精排（需自行实现，见 app/pipeline/rerank.py）
-                            # llm_judge：用 gpt-4o-mini 做 judge 精排（学术榜允许，reranker 不限；成本高）
+  strategy: none            # 保留字段，实际选型走环境变量 RERANKER_MODEL（见下）
+                            # RERANKER_MODEL=none → 不做精排，直接用融合排序（默认，最快）
+                            # RERANKER_MODEL=<模型名或本地路径> → 本地 cross-encoder 精排
+                            #   （镜像已内置 /app/models/ms-marco-MiniLM-L-6-v2；学术榜对 reranker 不限）
+                            # RERANK_TOP_N：精排候选数，默认 50
 
 server:
   add_llm_concurrency: 16   # Add 流程内 LLM 并发上限（保护配额）

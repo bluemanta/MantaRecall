@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_model: str = "gpt-4o-mini"                 # 学术榜硬约束：LLM 必须用 gpt-4o-mini
 
+    reranker_model: str = "none"                   # none=关闭；否则为 cross-encoder 模型名或本地路径
+    rerank_top_n: int = 50                         # RRF 融合后取前 N 候选做 cross-encoder 精排
+
     config_path: str = "./config.yaml"
     log_level: str = "info"
 
@@ -59,7 +62,7 @@ def build_app_state(settings: Settings):
     from app.pipeline.extract import LLMExtract, PassthroughExtraction
     from app.pipeline.conflict import LLMConflictJudge, NoConflict
     from app.pipeline.retrieve import DenseOnly, HybridRRF, LexicalOnly
-    from app.pipeline.rerank import NoneReranker
+    from app.pipeline.rerank import CrossEncoderRerank, NoneReranker
 
     if settings.embedding_provider == "stub":
         embedder = StubEmbedding(dim=settings.embedding_dim)
@@ -109,6 +112,11 @@ def build_app_state(settings: Settings):
     }[retrieval_name]
 
     rerank = NoneReranker()  # 扩展点：见 app/pipeline/rerank.py
+    reranker_model = (settings.reranker_model or "none").strip()
+    if reranker_model.lower() != "none":
+        rerank = CrossEncoderRerank(
+            model_name=reranker_model, top_n=settings.rerank_top_n
+        )
 
     return {
         "embedder": embedder,

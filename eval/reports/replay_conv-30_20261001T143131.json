@@ -1,0 +1,72 @@
+{
+  "generated_at": "2026-10-01T14:31:31.761014+00:00",
+  "config": {
+    "base_url": "https://aml-api.imalltrix.com",
+    "sample": "conv-30",
+    "max_turns": 50,
+    "max_qa": 20,
+    "top_k": 100,
+    "concurrency": 4,
+    "user_id": "eval:locomo",
+    "retrieval": "hybrid_rrf",
+    "extraction": "passthrough",
+    "conflict": "none",
+    "reranker": "none",
+    "embedding": "text-embedding-v4"
+  },
+  "ingest": {
+    "turns": 50,
+    "ok": 49,
+    "failed": [
+      {
+        "dia_id": "D2:16",
+        "error": "POST https://aml-api.imalltrix.com/add 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      }
+    ],
+    "ingest_chars": 6083
+  },
+  "eval": {
+    "n_questions": 11,
+    "skipped": {
+      "adversarial": 24,
+      "evidence_out_of_range": 60,
+      "errors": 9
+    },
+    "overall": {
+      "recall@1": 0.2727,
+      "recall@5": 0.4545,
+      "recall@10": 0.7273,
+      "recall@20": 0.8182,
+      "recall@100": 1.0,
+      "mrr": 0.4646,
+      "ndcg@100": 0.5317
+    },
+    "per_category": {
+      "single_hop": {
+        "n": 7,
+        "recall@1": 0.4286,
+        "recall@5": 0.4286,
+        "recall@10": 0.7143,
+        "recall@20": 0.7143,
+        "recall@100": 1.0,
+        "mrr": 0.61,
+        "ndcg@100": 0.6119
+      },
+      "temporal": {
+        "n": 4,
+        "recall@1": 0.0,
+        "recall@5": 0.5,
+        "recall@10": 0.75,
+        "recall@20": 1.0,
+        "recall@100": 1.0,
+        "mrr": 0.2102,
+        "ndcg@100": 0.3915
+      }
+    }
+  },
+  "cost": {
+    "ingest_chars": 6083,
+    "query_chars": 489,
+    "note": "token≈chars/4；DashScope text-embedding-v4 约 ¥0.7/1M tokens（README 参考价 ¥210/300M）"
+  }
+}

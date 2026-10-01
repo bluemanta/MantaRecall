@@ -108,18 +108,24 @@ async def _lexical_search(
 ) -> list[tuple[int, Retrieved]]:
     if not qtext.strip():
         return []
+    # 词法检索用 OR 语义：自然语言问题（8-12 个词）AND 几乎不可能命中。
+    # websearch_to_tsquery 对纯文本仍是 AND，必须在 Python 侧显式用 OR 连接；
+    # 去双引号防止 websearch 语法解析异常。
+    or_qtext = " OR ".join(t.replace('"', "") for t in qtext.split() if t)
+    if not or_qtext:
+        return []
     async with pool.acquire() as conn:
         rows = await conn.fetch(
             """
             SELECT id, content, session_id, meta,
                    ts_rank_cd(content_tsv, q) AS score
-            FROM memories, plainto_tsquery('simple', $1) AS q
+            FROM memories, websearch_to_tsquery('simple', $1) AS q
             WHERE user_id = $2 AND status = 'active'
               AND content_tsv @@ q
             ORDER BY score DESC
             LIMIT $3
             """,
-            qtext, user_id, k,
+            or_qtext, user_id, k,
         )
     out = []
     for r in rows:

@@ -1,0 +1,187 @@
+{
+  "generated_at": "2026-10-01T14:33:31.266220+00:00",
+  "config": {
+    "base_url": "https://aml-api.imalltrix.com",
+    "sample": "conv-30",
+    "max_turns": 50,
+    "max_qa": 20,
+    "top_k": 100,
+    "concurrency": 4,
+    "user_id": "eval:locomo",
+    "retrieval": "hybrid_rrf",
+    "extraction": "passthrough",
+    "conflict": "none",
+    "reranker": "none",
+    "embedding": "text-embedding-v4"
+  },
+  "ingest": {
+    "turns": 50,
+    "ok": 47,
+    "failed": [
+      {
+        "dia_id": "D1:3",
+        "error": "POST https://aml-api.imalltrix.com/add 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      },
+      {
+        "dia_id": "D2:2",
+        "error": "POST https://aml-api.imalltrix.com/add 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      },
+      {
+        "dia_id": "D2:8",
+        "error": "POST https://aml-api.imalltrix.com/add 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      }
+    ],
+    "ingest_chars": 5628
+  },
+  "eval": {
+    "n_questions": 5,
+    "skipped": {
+      "adversarial": 24,
+      "evidence_out_of_range": 60,
+      "errors": 15
+    },
+    "overall": {
+      "recall@1": 0.1,
+      "recall@5": 0.2833,
+      "recall@10": 0.6,
+      "recall@20": 0.65,
+      "recall@100": 1.0,
+      "mrr": 0.3683,
+      "ndcg@100": 0.4602
+    },
+    "per_category": {
+      "multi_hop": {
+        "n": 2,
+        "recall@1": 0.0,
+        "recall@5": 0.4583,
+        "recall@10": 0.75,
+        "recall@20": 0.875,
+        "recall@100": 1.0,
+        "mrr": 0.35,
+        "ndcg@100": 0.5404
+      },
+      "single_hop": {
+        "n": 3,
+        "recall@1": 0.1667,
+        "recall@5": 0.1667,
+        "recall@10": 0.5,
+        "recall@20": 0.5,
+        "recall@100": 1.0,
+        "mrr": 0.3805,
+        "ndcg@100": 0.4066
+      }
+    },
+    "per_question": [
+      {
+        "recall@1": 0.0,
+        "recall@5": 0.25,
+        "recall@10": 0.5,
+        "recall@20": 0.75,
+        "recall@100": 1.0,
+        "mrr": 0.2,
+        "ndcg@100": 0.45518506150540783,
+        "n_gold": 4,
+        "category": "multi_hop",
+        "question": "What do Jon and Gina both have in common?"
+      },
+      {
+        "recall@1": 0.5,
+        "recall@5": 0.5,
+        "recall@10": 0.5,
+        "recall@20": 0.5,
+        "recall@100": 1.0,
+        "mrr": 1.0,
+        "ndcg@100": 0.7223509111745405,
+        "n_gold": 2,
+        "category": "single_hop",
+        "question": "How do Jon and Gina both like to destress?"
+      },
+      {
+        "recall@1": 0.0,
+        "recall@5": 0.6666666666666666,
+        "recall@10": 1.0,
+        "recall@20": 1.0,
+        "recall@100": 1.0,
+        "mrr": 0.5,
+        "ndcg@100": 0.6256646589861505,
+        "n_gold": 3,
+        "category": "multi_hop",
+        "question": "What Jon thinks the ideal dance studio should look like?"
+      },
+      {
+        "error": "POST https://aml-api.imalltrix.com/search 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      },
+      {
+        "error": "POST https://aml-api.imalltrix.com/search 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      },
+      {
+        "error": "POST https://aml-api.imalltrix.com/search 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      },
+      {
+        "error": "POST https://aml-api.imalltrix.com/search 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      },
+      {
+        "error": "POST https://aml-api.imalltrix.com/search 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      },
+      {
+        "error": "POST https://aml-api.imalltrix.com/search 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      },
+      {
+        "error": "POST https://aml-api.imalltrix.com/search 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      },
+      {
+        "recall@1": 0.0,
+        "recall@5": 0.0,
+        "recall@10": 1.0,
+        "recall@20": 1.0,
+        "recall@100": 1.0,
+        "mrr": 0.1111111111111111,
+        "ndcg@100": 0.3010299956639812,
+        "n_gold": 1,
+        "category": "single_hop",
+        "question": "What do the dancers in the photo represent?"
+      },
+      {
+        "error": "POST https://aml-api.imalltrix.com/search 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      },
+      {
+        "recall@1": 0.0,
+        "recall@5": 0.0,
+        "recall@10": 0.0,
+        "recall@20": 0.0,
+        "recall@100": 1.0,
+        "mrr": 0.030303030303030304,
+        "ndcg@100": 0.1965616322328226,
+        "n_gold": 1,
+        "category": "single_hop",
+        "question": "What is Jon's attitude towards being part of the dance festival?"
+      },
+      {
+        "error": "POST https://aml-api.imalltrix.com/search 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      },
+      {
+        "error": "POST https://aml-api.imalltrix.com/search 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      },
+      {
+        "error": "POST https://aml-api.imalltrix.com/search 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      },
+      {
+        "error": "POST https://aml-api.imalltrix.com/search 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      },
+      {
+        "error": "POST https://aml-api.imalltrix.com/search 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      },
+      {
+        "error": "POST https://aml-api.imalltrix.com/search 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      },
+      {
+        "error": "POST https://aml-api.imalltrix.com/search 失败(3次重试): RemoteDisconnected: Remote end closed connection without response"
+      }
+    ]
+  },
+  "cost": {
+    "ingest_chars": 5628,
+    "query_chars": 246,
+    "note": "token≈chars/4；DashScope text-embedding-v4 约 ¥0.7/1M tokens（README 参考价 ¥210/300M）"
+  }
+}

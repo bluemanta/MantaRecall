@@ -29,7 +29,7 @@ rerank:
   strategy: none            # 保留字段，实际选型走环境变量 RERANKER_MODEL（见下）
                             # RERANKER_MODEL=none → 不做精排，直接用融合排序（默认，最快）
                             # RERANKER_MODEL=<模型名或本地路径> → 本地 cross-encoder 精排
-                            #   （镜像已内置 /app/models/ms-marco-MiniLM-L-6-v2；学术榜对 reranker 不限）
+                            #   （镜像已内置 /app/models/ms-marco-MiniLM-L6-v2；学术榜对 reranker 不限）
                             # RERANK_TOP_N：精排候选数，默认 50
 
 server:

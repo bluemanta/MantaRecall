@@ -8,12 +8,28 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Protocol
 
 from app.models import Message
 
 PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
+
+
+def _format_date_prefix(timestamp_ms: int | None) -> str:
+    """时间地基：timestamp（毫秒）存在则返回 ' [08 May 2023]'，否则空字符串。
+
+    日期进 content 文本，便于 lexical 匹配（"May 2023"）、dense 感知、
+    以及下游答案推断（如 "yesterday" 的消解）。无 timestamp 时优雅降级。
+    """
+    if not timestamp_ms:
+        return ""
+    try:
+        dt = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+        return f" [{dt.strftime('%d %B %Y')}]"
+    except (ValueError, OSError, OverflowError):
+        return ""
 
 
 @dataclass
@@ -36,9 +52,10 @@ class PassthroughExtraction:
             content = (m.content or "").strip()
             if not content:
                 continue
+            date_prefix = _format_date_prefix(m.timestamp)
             facts.append(
                 ExtractedFact(
-                    text=f"{m.role}: {content}",
+                    text=f"{m.role}{date_prefix}: {content}",
                     kind="message",
                     meta={"timestamp": m.timestamp, "role": m.role},
                 )

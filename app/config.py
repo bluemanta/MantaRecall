@@ -21,7 +21,8 @@ class Settings(BaseSettings):
     embedding_model: str = "text-embedding-v4"     # 学术榜硬约束：必须是 text-embedding-v4
     embedding_dim: int = 1024                      # text-embedding-v4 = 1024 维
     embedding_send_dimensions: bool = True
-    embedding_batch_size: int = 32
+    embedding_batch_size: int = 10  # 提供商单批上限 10（代码内钳制，配更大也无效）
+    embedding_max_input_chars: int = 8000  # 单条 embedding 输入截断（text-embedding-v4 上限 16000，8000 实测安全）
 
     llm_base_url: str = "https://api.openai.com/v1"
     llm_api_key: str = ""
@@ -75,6 +76,7 @@ def build_app_state(settings: Settings):
             dim=settings.embedding_dim,
             send_dimensions=settings.embedding_send_dimensions,
             batch_size=settings.embedding_batch_size,
+            max_input_chars=settings.embedding_max_input_chars,
         )
 
     llm = None

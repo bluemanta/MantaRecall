@@ -1,0 +1,70 @@
+{
+  "variant": "enriched:eval:locomo-date",
+  "samples": "conv-48",
+  "generated_at": "2026-10-03T04:26:29.317049+00:00",
+  "n_questions": 191,
+  "total_add_calls": 681,
+  "total_time_s": 187.6,
+  "overall": {
+    "recall@1": 0.4933,
+    "recall@5": 0.7183,
+    "recall@10": 0.7606,
+    "recall@20": 0.7901,
+    "recall@100": 0.8838,
+    "mrr": 0.684,
+    "ndcg@100": 0.6955
+  },
+  "by_category": {
+    "multi_hop": {
+      "recall@1": 0.177,
+      "recall@5": 0.5651,
+      "recall@10": 0.577,
+      "recall@20": 0.6381,
+      "recall@100": 0.7825,
+      "mrr": 0.7415,
+      "ndcg@100": 0.606
+    },
+    "open_domain": {
+      "recall@1": 0.3,
+      "recall@5": 0.55,
+      "recall@10": 0.55,
+      "recall@20": 0.55,
+      "recall@100": 0.67,
+      "mrr": 0.4385,
+      "ndcg@100": 0.4842
+    },
+    "single_hop": {
+      "recall@1": 0.5141,
+      "recall@5": 0.7401,
+      "recall@10": 0.774,
+      "recall@20": 0.8107,
+      "recall@100": 0.9068,
+      "mrr": 0.6787,
+      "ndcg@100": 0.7061
+    },
+    "temporal": {
+      "recall@1": 0.6389,
+      "recall@5": 0.7738,
+      "recall@10": 0.8651,
+      "recall@20": 0.8651,
+      "recall@100": 0.9206,
+      "mrr": 0.7286,
+      "ndcg@100": 0.761
+    }
+  },
+  "per_sample": {
+    "conv-48": {
+      "overall": {
+        "recall@1": 0.4933,
+        "recall@5": 0.7183,
+        "recall@10": 0.7606,
+        "recall@20": 0.7901,
+        "recall@100": 0.8838,
+        "mrr": 0.684,
+        "ndcg@100": 0.6955
+      },
+      "n": 191,
+      "search_s": 107.2
+    }
+  }
+}

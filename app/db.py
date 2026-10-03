@@ -22,12 +22,17 @@ CREATE TABLE IF NOT EXISTS kv (
 );
 
 -- Add 幂等 / 409 判定：request_id 主键
+-- status 状态机：processing（处理中） -> committed（已落库，可幂等返回）
+--                                  -> failed（失败，可被认领重试）
 CREATE TABLE IF NOT EXISTS add_requests (
   request_id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   session_id TEXT NOT NULL,
   content_hash TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  status TEXT NOT NULL DEFAULT 'processing',
+  worker_token TEXT,                       -- 当前持有者（防慢 worker 被误接管）
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS memories (
@@ -38,7 +43,7 @@ CREATE TABLE IF NOT EXISTS memories (
   kind TEXT NOT NULL DEFAULT 'fact',          -- fact | event | preference | message
   content TEXT NOT NULL,
   content_tsv tsvector
-    GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED,
+    GENERATED ALWAYS AS (to_tsvector('english', content)) STORED,
   embedding vector({dim}) NOT NULL,
   status TEXT NOT NULL DEFAULT 'active',      -- active | superseded | deleted
   meta JSONB NOT NULL DEFAULT '{{}}',
@@ -65,6 +70,23 @@ async def init_schema(pool: asyncpg.Pool, dim: int) -> None:
                 f"(通常用 superuser)：{e}"
             ) from e
         await conn.execute(ddl(dim))
+        # 老库迁移：add_requests 状态机字段（2026-10-02 引入）
+        await conn.execute(
+            "ALTER TABLE add_requests ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'processing'"
+        )
+        await conn.execute(
+            "ALTER TABLE add_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now()"
+        )
+        await conn.execute(
+            "ALTER TABLE add_requests ADD COLUMN IF NOT EXISTS worker_token TEXT"
+        )
+        # 存量行（worker_token 为 NULL，只能是旧代码写入的）视为已提交：
+        # 旧代码只在成功时保留占位行，失败时删除；不标记会导致旧 request_id
+        # 的重复请求被误判为 processing（等 30s 后 503，甚至 30 分钟后被重复写入）
+        await conn.execute(
+            "UPDATE add_requests SET status = 'committed', updated_at = now()"
+            " WHERE worker_token IS NULL AND status = 'processing'"
+        )
 
 
 async def check_embedding_identity(pool: asyncpg.Pool, identity: str) -> None:

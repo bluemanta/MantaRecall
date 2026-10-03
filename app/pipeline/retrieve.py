@@ -119,7 +119,7 @@ async def _lexical_search(
             """
             SELECT id, content, session_id, meta,
                    ts_rank_cd(content_tsv, q) AS score
-            FROM memories, websearch_to_tsquery('simple', $1) AS q
+            FROM memories, websearch_to_tsquery('english', $1) AS q
             WHERE user_id = $2 AND status = 'active'
               AND content_tsv @@ q
             ORDER BY score DESC

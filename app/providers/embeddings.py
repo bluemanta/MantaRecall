@@ -32,6 +32,7 @@ class OpenAICompatibleEmbedding:
         batch_size: int = 32,
         timeout: float = 60.0,
         max_concurrency: int = 8,
+        max_input_chars: int = 8000,
     ):
         if not api_key:
             raise RuntimeError("EMBEDDING_API_KEY 为空，无法调用 embedding 服务")
@@ -40,8 +41,14 @@ class OpenAICompatibleEmbedding:
         self.model = model
         self.dim = dim
         self.send_dimensions = send_dimensions
-        self.batch_size = batch_size
+        # DashScope 兼容接口要求单批 input 条数不超过 10（超限 400 且不可重试），
+        # 这里钳制，.env 里配再大也不超限。
+        self.batch_size = min(batch_size, 10)
+        # text-embedding-v4（DashScope 兼容接口）单条输入长度上限 16000，
+        # 超限返回 400 且重试无意义；8000 字符经实测安全。截断只影响向量输入，
+        # 原文仍完整存库并走 lexical 索引。
         self._sem = asyncio.Semaphore(max_concurrency)
+        self.max_input_chars = max_input_chars
         self._client = httpx.AsyncClient(
             base_url=self.base_url,
             timeout=httpx.Timeout(timeout),
@@ -79,6 +86,14 @@ class OpenAICompatibleEmbedding:
                             f"embedding 维度 {len(v)} 与配置 {self.dim} 不一致"
                         )
                 return vecs
+            except httpx.HTTPStatusError as e:
+                # 400 是确定性失败（输入超限/非法），重试无意义，直接失败并带上响应体
+                if e.response is not None and e.response.status_code == 400:
+                    raise RuntimeError(
+                        f"embedding 400（输入非法，不重试）: {e.response.text[:300]}"
+                    ) from e
+                last_err = e
+                await asyncio.sleep(2 ** attempt)
             except httpx.HTTPError as e:
                 last_err = e
                 await asyncio.sleep(2 ** attempt)
@@ -87,6 +102,9 @@ class OpenAICompatibleEmbedding:
     async def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
+        # 单条超限会导致整批 400；截断只影响向量输入，原文仍完整存库
+        if self.max_input_chars and self.max_input_chars > 0:
+            texts = [t[: self.max_input_chars] for t in texts]
         out: list[list[float]] = []
         batches = [
             texts[i : i + self.batch_size] for i in range(0, len(texts), self.batch_size)

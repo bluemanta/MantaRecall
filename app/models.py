@@ -3,9 +3,10 @@
 契约来源（2026-10-01 核验）：
 - GET /health 无需鉴权，2xx 即就绪
 - POST /add 同步；HTTP 200 = 全部消息已持久化且立即可搜；
-  响应必须原样回传 request_id / user_id / session_id；
+  响应 success=true，并原样回传 request_id / user_id / session_id；
   相同 request_id + 相同内容幂等，相同 request_id + 不同内容 -> 409
 - POST /search 返回 {"data": [...]}，按相关性排序，数量不超过 top_k；
+  每条证据带生命周期内稳定的字符串 id；
   只返回记忆证据，不生成答案；user_id 是唯一的隔离边界
 """
 from __future__ import annotations
@@ -27,6 +28,7 @@ class AddRequest(BaseModel):
 
 
 class AddResponse(BaseModel):
+    success: bool = True
     request_id: str
     user_id: str
     session_id: str
@@ -40,6 +42,7 @@ class SearchRequest(BaseModel):
 
 
 class EvidenceItem(BaseModel):
+    id: str  # 记忆生命周期内稳定的字符串 id（str(memories.id)）
     content: str
     score: float
     session_id: str | None = None

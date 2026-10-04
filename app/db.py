@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS memories (
   kind TEXT NOT NULL DEFAULT 'fact',          -- fact | event | preference | message
   content TEXT NOT NULL,
   content_tsv tsvector
-    GENERATED ALWAYS AS (to_tsvector('english', content)) STORED,
+    GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED,
   embedding vector({dim}) NOT NULL,
   status TEXT NOT NULL DEFAULT 'active',      -- active | superseded | deleted
   meta JSONB NOT NULL DEFAULT '{{}}',

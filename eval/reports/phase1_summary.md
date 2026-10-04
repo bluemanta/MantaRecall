@@ -43,18 +43,22 @@ multi_hop 0.044→0.165（+274%）；open_domain 0.084→0.180。
 真实价值可能在 Answer 阶段（证据带日期 → "yesterday" 可消解），
 retrieval 指标捕捉不到。零风险，保留。
 
-### 2.3 lexical `simple` vs `english`（离线 TEMP 表，n=1446，lexical-only）
+### 2.3 lexical `simple` vs `english`
 
-| 指标 | simple | english | 变化 |
-|---|---:|---:|---:|
-| R@1 | 0.0897 | 0.2099 | **+134%** |
-| R@5 | 0.2160 | 0.3851 | +78% |
-| MRR | 0.1751 | 0.3259 | +86% |
+**lexical-only**（离线 TEMP 表，n=1446）：english R@1 +134%（0.0897→0.2099），全面优于 simple。
 
-分题型 R@1 全面提升：temporal 0.076→0.233（+207%）最显著。
-**已迁移生产**：重建 `content_tsv` 生成列为 `to_tsvector('english', ...)`，
-查询改为 `websearch_to_tsquery('english', ...)`，重建 GIN 索引。
-词干实测（"running" 命中 "run"）正常，本地 smoke 20/20。
+**端到端**（conv-48，n=191，hybrid+reranker 完整链路，simple+date vs english+date）：
+
+| 指标 | simple | english |
+|---|---:|---:|
+| R@1 | 0.4985 | 0.4933 |
+| MRR | 0.6914 | 0.6840 |
+
+基本打平——lexical-only 的优势被 dense+RRF+reranker 抹平。
+
+**决策（2026-10-04）：保持 simple**。端到端无差异，但 english 有停用词风险
+（删掉 `not/no/only/before`，Smoke 中 B/D 两次偏低与之吻合），simple 是零风险已知状态。
+此前曾短暂上线 english（镜像 `aml-api:phase1-20261003`），已回滚，当前生产为 simple+date。
 
 ### 2.4 HNSW 精确对照（60 随机向量）
 
@@ -67,7 +71,7 @@ recall@1/10/50/100 全部 = 1.0000。当前数据规模下 HNSW 零召回损失�
 |---|---|---|
 | speaker 前缀 + role 映射 | 进 | 已上线（`{role}: {speaker}: {text}`） |
 | 日期增强（timestamp→日期） | 进 | 已上线，优雅降级 |
-| lexical english | 进 | 已上线（DB+代码+索引） |
+| lexical english | 不进（回滚） | 端到端无差异，有停用词风险，保持 simple |
 | HNSW 调参 | 不做 | 无损失 |
 
 当前镜像：`aml-api:phase1-20261003`（= latest）。

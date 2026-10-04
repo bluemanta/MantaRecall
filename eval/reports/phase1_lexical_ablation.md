@@ -16,14 +16,14 @@
 | R@100 | 0.6197 | 0.6966 | +12% |
 | MRR | 0.1751 | 0.3259 | **+86%** |
 
-## 分题型 R@1
+## 分题型 R@1（标签已按 LoCoMo 官方映射修正：1=multi_hop, 2=temporal, 3=open_domain, 4=single_hop）
 
 | 题型 | simple | english |
 |---|---|---|
-| single_hop (n=267) | 0.0221 | 0.0424 |
+| multi_hop (n=267) | 0.0221 | 0.0424 |
 | temporal (n=294) | 0.0760 | 0.2330 |
-| multi_hop (n=89) | 0.0337 | 0.0955 |
-| open_domain (n=796) | 0.1237 | 0.2703 |
+| open_domain (n=89) | 0.0337 | 0.0955 |
+| single_hop (n=796) | 0.1237 | 0.2703 |
 
 ## 结论
 

@@ -116,6 +116,15 @@ class CrossEncoderRerank:
         for it, s in zip(head, scores):
             it.score = float(s)
         head.sort(key=lambda x: x.score, reverse=True)
+        # C2：tail 原来保留 RRF 分数（≈0.006–0.033），与 head 的 cross-encoder
+        # 分数（logits 可为负）量纲不同，导致返回的 score 非单调。若评测方按
+        # score 重排或阈值截断会乱序。改法：tail 分数 = min(head) − ε·i，
+        # 顺序不变，保证整体单调不增。
+        if head and tail:
+            floor = head[-1].score
+            eps = 1e-6
+            for i, it in enumerate(tail):
+                it.score = floor - eps * (i + 1)
         return head + tail
 
     def stats(self) -> dict:

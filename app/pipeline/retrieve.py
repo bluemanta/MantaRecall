@@ -8,12 +8,15 @@
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Protocol
 
 import asyncpg
 
 from app.config import Settings, get_cfg
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -194,8 +197,14 @@ class HybridRRF:
 
     async def search(self, query, options, user_id, top_k, pool, embedder) -> list[Retrieved]:
         qtext = _query_text(query, options)
-        qvec = (await embedder.embed([qtext]))[0]
-        dense = await _dense_search(pool, user_id, qvec, self.dense_k)
+        # C10：query embedding 失败时（如 DashScope 限流/超时）退回 lexical，
+        # 记 warning，保证 Search 不直接 500。rerank 在上层继续执行。
+        try:
+            qvec = (await embedder.embed([qtext]))[0]
+        except Exception as e:
+            log.warning("query embedding failed, falling back to lexical only: %s", e)
+            qvec = None
+        dense = await _dense_search(pool, user_id, qvec, self.dense_k) if qvec is not None else []
         lexical = await _lexical_search(pool, user_id, qtext, self.lexical_k)
         fused = _rrf_fuse([dense, lexical], k=self.rrf_k)
         seeds = fused[: max(self.seed_k, top_k)]

@@ -22,11 +22,16 @@ def _format_date_prefix(timestamp_ms: int | None) -> str:
 
     日期进 content 文本，便于 lexical 匹配（"May 2023"）、dense 感知、
     以及下游答案推断（如 "yesterday" 的消解）。无 timestamp 时优雅降级。
+
+    C4：年份不在 2000–2100 则不拼日期（不猜单位）。秒级时间戳
+    （如 1683556560）会被渲染成 1970 年，污染 dense/lexical/证据。
     """
     if not timestamp_ms:
         return ""
     try:
         dt = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+        if not 2000 <= dt.year <= 2100:
+            return ""
         return f" [{dt.strftime('%d %B %Y')}]"
     except (ValueError, OSError, OverflowError):
         return ""

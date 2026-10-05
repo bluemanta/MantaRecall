@@ -61,7 +61,7 @@ def _content_hash(user_id: str, session_id: str, messages) -> str:
 # 只有 committed 才能幂等返回 200；worker_token 防止慢 worker 被误接管导致重复写入。
 _POLL_TIMEOUT = 30.0        # 等 processing 转终态的最长秒数
 _POLL_INTERVAL = 0.5
-_STALE_MINUTES = 30         # processing 超过此时长未更新视为崩溃残留，可认领
+_STALE_MINUTES = 5          # C3：processing 超过此时长未更新视为崩溃残留，可认领（须 > 流水线超时 120s）
 
 
 class _Takeover(Exception):
@@ -259,7 +259,8 @@ async def add(req: AddRequest, request: Request, _key: str = Depends(require_api
         # action == "claimed"：本请求已认领为 worker，继续走流水线
 
     # 2) 抽取 -> 向量化 -> 冲突裁决（都在事务外做，不占用 DB 连接做网络等待）
-    try:
+    # C3：流水线包 120s 超时；CancelledError 也要标记 failed（shield 保护 DB 写不被取消）。
+    async def _run_pipeline():
         facts = await request.app.state.extraction.extract(req.messages)
         vectors = (
             await request.app.state.embedder.embed([f.text for f in facts])
@@ -303,6 +304,9 @@ async def add(req: AddRequest, request: Request, _key: str = Depends(require_api
                 )
                 if committed is None:
                     raise _Takeover()
+
+    try:
+        await asyncio.wait_for(_run_pipeline(), timeout=120.0)
     except _Takeover:
         # 被其他 worker 接管：以最新状态为准
         row = await _read_request_row(pool, req.request_id)
@@ -313,12 +317,17 @@ async def add(req: AddRequest, request: Request, _key: str = Depends(require_api
                 request_id=req.request_id, user_id=req.user_id, session_id=req.session_id,
             )
         raise HTTPException(status_code=503, detail="add raced with another worker, retry")
-    except Exception as e:
-        # 流水线失败：标记 failed（保留审计痕迹），允许认领重试
-        await _mark_failed(pool, req.request_id, token)
+    except BaseException as e:
+        # C3：BaseException 接住 CancelledError（进程被杀/部署重启/请求取消时）；
+        # asyncio.shield 保证 _mark_failed 的 DB 写不被取消打断，避免孤儿 processing。
+        await asyncio.shield(_mark_failed(pool, req.request_id, token))
         log.exception("add failed: %s", req.request_id)
+        if isinstance(e, (KeyboardInterrupt, SystemExit, asyncio.CancelledError)):
+            raise  # 取消/退出继续向上传播，但 failed 已标记
         if isinstance(e, HTTPException):
             raise
+        if isinstance(e, TimeoutError):
+            raise HTTPException(status_code=504, detail="add pipeline timeout (120s), retry")
         raise HTTPException(status_code=500, detail=f"add failed: {str(e)[:300]}")
 
     return AddResponse(

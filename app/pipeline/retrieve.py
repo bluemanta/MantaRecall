@@ -79,12 +79,19 @@ async def _dense_search(
     pool: asyncpg.Pool, user_id: str, qvec: list[float], k: int
 ) -> list[tuple[int, Retrieved]]:
     async with pool.acquire() as conn:
+        # C1 修复：MATERIALIZED CTE 强制精确检索。直接在 memories 上
+        # ORDER BY embedding <=> 时，规划器可能选 HNSW，索引只产出
+        # ef_search 条再按 user_id 过滤，导致 dense 召回静默截断。
         rows = await conn.fetch(
             """
+            WITH u AS MATERIALIZED (
+              SELECT id, content, session_id, meta, embedding
+              FROM memories
+              WHERE user_id = $2 AND status = 'active'
+            )
             SELECT id, content, session_id, meta,
                    1 - (embedding <=> $1) AS score
-            FROM memories
-            WHERE user_id = $2 AND status = 'active'
+            FROM u
             ORDER BY embedding <=> $1
             LIMIT $3
             """,

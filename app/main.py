@@ -206,11 +206,17 @@ async def _fetch_conflict_candidates(
     pool: asyncpg.Pool, user_id: str, vector: list[float], k: int, min_sim: float
 ) -> list[Candidate]:
     async with pool.acquire() as conn:
+        # C1 修复：同 _dense_search，MATERIALIZED CTE 强制精确检索，
+        # 避免 HNSW + user_id 过滤导致候选静默截断。
         rows = await conn.fetch(
             """
+            WITH u AS MATERIALIZED (
+              SELECT id, content, embedding
+              FROM memories
+              WHERE user_id = $2 AND status = 'active'
+            )
             SELECT id, content, 1 - (embedding <=> $1) AS sim
-            FROM memories
-            WHERE user_id = $2 AND status = 'active'
+            FROM u
             ORDER BY embedding <=> $1
             LIMIT $3
             """,

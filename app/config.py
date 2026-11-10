@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     embedding_send_dimensions: bool = True
     embedding_batch_size: int = 10  # 提供商单批上限 10（代码内钳制，配更大也无效）
     embedding_max_input_chars: int = 8000  # 单条 embedding 输入截断（text-embedding-v4 上限 16000，8000 实测安全）
+    embedding_max_concurrency: int = 3  # embedding 并发闸：2026-10-17 Full 因百炼 TPM(120万) 限流 429，
+    # 8 并发峰值 TPM 达 500万+，直接撞墙。降到 3 并发把峰值压到 ~200万内，配合 C10 降级兜底。
+    # 工单提额到 2000万 TPM 后可调回 8。
 
     llm_base_url: str = "https://api.openai.com/v1"
     llm_api_key: str = ""
@@ -77,6 +80,7 @@ def build_app_state(settings: Settings):
             send_dimensions=settings.embedding_send_dimensions,
             batch_size=settings.embedding_batch_size,
             max_input_chars=settings.embedding_max_input_chars,
+            max_concurrency=settings.embedding_max_concurrency,
         )
 
     llm = None

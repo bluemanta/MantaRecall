@@ -123,24 +123,51 @@ async def _lexical_search(
     # 去双引号防止 websearch 语法解析异常。
     # C5：去掉 token 前导 '-'（如 "-5" 会被 websearch 解析成取反 !'5'，
     # 单独的 "-" 更会把后续 OR 变成 AND），过滤空 token。
+    # 2026-10-17 Full 实测：token 过多（200+）的 OR 查询会导致 Postgres
+    # StatementTooComplexError（stack depth limit exceeded），直接 500。
+    # C10 的降级通道本身不能成为新的 500 来源：去重后限制最大 OR 项数，
+    # 超限截断并记 warning；残余风险由外层 try/except 兜底。
     tokens = [t.replace('"', "").lstrip("-") for t in qtext.split()]
     tokens = [t for t in tokens if t]
-    or_qtext = " OR ".join(tokens)
+    seen: set[str] = set()
+    uniq_tokens: list[str] = []
+    for t in tokens:
+        if t not in seen:
+            seen.add(t)
+            uniq_tokens.append(t)
+    max_terms = 32
+    if len(uniq_tokens) > max_terms:
+        log.warning(
+            "lexical query truncated: %d -> %d terms (avoid stack depth exceeded)",
+            len(uniq_tokens),
+            max_terms,
+        )
+        uniq_tokens = uniq_tokens[:max_terms]
+    or_qtext = " OR ".join(uniq_tokens)
     if not or_qtext:
         return []
-    async with pool.acquire() as conn:
-        rows = await conn.fetch(
-            """
-            SELECT id, content, session_id, meta,
-                   ts_rank_cd(content_tsv, q) AS score
-            FROM memories, websearch_to_tsquery('simple', $1) AS q
-            WHERE user_id = $2 AND status = 'active'
-              AND content_tsv @@ q
-            ORDER BY score DESC
-            LIMIT $3
-            """,
-            or_qtext, user_id, k,
+    try:
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT id, content, session_id, meta,
+                       ts_rank_cd(content_tsv, q) AS score
+                FROM memories, websearch_to_tsquery('simple', $1) AS q
+                WHERE user_id = $2 AND status = 'active'
+                  AND content_tsv @@ q
+                ORDER BY score DESC
+                LIMIT $3
+                """,
+                or_qtext, user_id, k,
+            )
+    except asyncpg.exceptions.StatementTooComplexError:
+        # 极端 query 形态仍可能撑爆解析栈：降级为空结果，不抛 500。
+        # C10 设计意图：Search 永不因检索内部错误直接 500。
+        log.warning(
+            "lexical query still too complex, returning empty (qtext_len=%d)",
+            len(qtext),
         )
+        return []
     out = []
     for r in rows:
         meta = _meta_dict(r)
